@@ -1,0 +1,115 @@
+# =========================
+# Apptainer (HPC) Makefile
+# =========================
+# This Makefile supports building and running your app in an HPC environment
+# using Apptainer (formerly Singularity).
+#
+# Common use:
+#   make build      # build .sif image
+#   make run        # run the container entrypoint
+#   make shell      # get an interactive shell inside container
+#   make exec CMD="python --version"
+#   make slurm-run  # example srun wrapper (edit to match your cluster)
+#
+# Notes:
+# - Many HPC clusters DO NOT allow building on compute nodes.
+#   Build on a login node (if allowed) or on your laptop, then copy the .sif to HPC.
+# - If your cluster forbids local builds, use: `apptainer build --remote ...`
+#   or ask admins about a build node.
+
+# -------------------------
+# App configuration
+# -------------------------
+APP_NAME      ?= app-5350
+SIF           ?= 5350.sif
+
+# Choose ONE build source:
+# 1) Build from an Apptainer definition file:
+DEF           ?= Apptainer.def
+# 2) Or build from a Docker/OCI image (e.g., docker://alpine:latest):
+DOCKER_URI    ?= docker://ubuntu:22.04
+
+# Runtime
+HOST_PORT     ?= 8080
+CONT_PORT     ?= 9080
+
+# Bind mounts (host_path:container_path). Add more with comma separation.
+# Example: /scratch/$USER:/scratch,/project:/project
+BIND          ?= $${PWD}:/work
+
+# Optional environment variables for the container process
+ENV_VARS      ?= PORT=$(CONT_PORT)
+
+# -------------------------
+# Targets
+# -------------------------
+.PHONY: help info build build-from-def build-from-docker run shell exec clean cache slurm-run
+
+help:
+	@echo "Targets:"
+	@echo "  make info            - show apptainer version and current settings"
+	@echo "  make build           - build SIF (default: from DEF if it exists, else from DOCKER_URI)"
+	@echo "  make build-from-def  - build SIF from Apptainer.def"
+	@echo "  make build-from-docker - build SIF from docker://... URI"
+	@echo "  make run             - run container entrypoint"
+	@echo "  make shell           - interactive shell inside the container"
+	@echo "  make exec CMD=...    - run a command inside the container"
+	@echo "  make clean           - remove the built SIF"
+	@echo "  make cache           - show apptainer cache info"
+	@echo "  make slurm-run       - example srun wrapper (edit for your cluster)"
+
+info:
+	@echo "Apptainer:"
+	@apptainer --version || true
+	@echo ""
+	@echo "APP_NAME=$(APP_NAME)"
+	@echo "SIF=$(SIF)"
+	@echo "DEF=$(DEF)"
+	@echo "DOCKER_URI=$(DOCKER_URI)"
+	@echo "BIND=$(BIND)"
+	@echo "HOST_PORT=$(HOST_PORT)"
+	@echo "CONT_PORT=$(CONT_PORT)"
+	@echo "ENV_VARS=$(ENV_VARS)"
+
+# Build selection logic:
+# If Apptainer.def exists, build from it; otherwise build from DOCKER_URI.
+build:
+	@if [ -f "$(DEF)" ]; then 		$(MAKE) build-from-def; 	else 		$(MAKE) build-from-docker; 	fi
+
+build-from-def:
+	@echo "Building $(SIF) from $(DEF)"
+	@apptainer build $(SIF) $(DEF)
+
+build-from-docker:
+	@echo "Building $(SIF) from $(DOCKER_URI)"
+	@apptainer build $(SIF) $(DOCKER_URI)
+
+# Run the container entrypoint. Many HPC apps are CLI-based; for web apps you often
+# want a port-forward or to run on a compute node and tunnel.
+run:
+	@echo "Running $(SIF) (bind: $(BIND))"
+	@apptainer run --bind "$(BIND)" --env "$(ENV_VARS)" $(SIF)
+
+shell:
+	@echo "Shell into $(SIF) (bind: $(BIND))"
+	@apptainer shell --bind "$(BIND)" --env "$(ENV_VARS)" $(SIF)
+
+exec:
+	@if [ -z "$(CMD)" ]; then 		echo "Provide CMD, e.g. make exec CMD='python --version'"; 		exit 2; 	fi
+	@apptainer exec --bind "$(BIND)" --env "$(ENV_VARS)" $(SIF) sh -lc "$(CMD)"
+
+clean:
+	@rm -f $(SIF)
+	@echo "Removed $(SIF)"
+
+cache:
+	@apptainer cache list || true
+	@apptainer cache clean -d || true
+	@echo "Tip: omit 'cache clean' if your admins prefer you not clear shared caches."
+
+# Example SLURM wrapper (edit partition/time/mem/cpus for your cluster).
+# For web apps, you usually run on a compute node and then SSH tunnel the port.
+slurm-run:
+	@echo "Example: starting on SLURM compute node..."
+	@srun -N 1 -n 1 -c 4 --mem=4G --time=00:30:00 --pty \
+		bash -lc 'apptainer run --bind "$(BIND)" --env "$(ENV_VARS)" $(SIF)'

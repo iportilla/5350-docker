@@ -1,0 +1,37 @@
+# Apptainer.def (template)
+#
+# This is a starter definition file. Customize it to your app.
+# If you already have a Dockerfile, you can often build from that Docker image instead:
+#   apptainer build 5350.sif docker://yourimage:tag
+
+Bootstrap: docker
+From: ubuntu:22.04
+
+%labels
+  Author YourTeam
+  Version v1
+
+%post
+  apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+  # Example: install Python deps
+  # COPY requirements.txt /tmp/requirements.txt (Apptainer doesn't have COPY;
+  # you typically bind-mount code at runtime or use %files below.)
+  # pip3 install -r /tmp/requirements.txt
+
+%environment
+  # Default environment variables inside the container
+  export PORT=9080
+  export PYTHONUNBUFFERED=1
+
+%runscript
+  # This is what runs when you do: apptainer run 5350.sif
+  # Replace with your app start command.
+  echo "Container started. Override this in Apptainer.def %runscript."
+  echo "Example: python3 -m http.server ${PORT}"
+  python3 -m http.server ${PORT}
+
+%help
+  This is a template Apptainer definition.
+  Customize %post to install your dependencies and %runscript to start your app.
