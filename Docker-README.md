@@ -67,7 +67,7 @@ In this topic, you'll follow a series of hands-on exercises that demonstrate how
 6. Clone Docker repository from github:
 
    ```
-	git clone https://github.com/iportilla/5720-Docker.git
+	git clone https://github.com/iportilla/5350-Docker.git
    ```
 	
 8. Change directory to the Docker directory:
