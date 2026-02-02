@@ -4,6 +4,7 @@ Welcome!
 This repo shows how to **build, run, stop, and restart** a local application using:
 
 - **Apple’s `container` CLI** (macOS)
+  See https://formulae.brew.sh/formula/container
 - A **Makefile** to automate common tasks
 - An **ARM64 Dockerfile** (for Apple Silicon Macs)
 
