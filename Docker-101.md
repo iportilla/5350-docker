@@ -26,25 +26,18 @@ In this topic, you'll follow a series of hands-on exercises that demonstrate how
 <h3>STAT-5350/4350</h3>
 </p>
 
-1. login to the development virtual machine VM hosted on Azure cloud
+1. login to the development virtual machine VM hosted on Azure cloud (IP given in class)
 
 	```
-    ssh azureuser@XX.XX.XX.XX
+    ssh ubuntu@XX.XX.XX.XX
     ```
 
 
     
     *Make sure to post your **ssh public key** to the Slack channel used for this lesson
-    
-2. Navigate to your team subdirectory
 
-	```
- 	cd team-1
- 	```
 
-	or team-2,team-3, ...
-
-4. Create & navigate to your own directory:
+2. Create & navigate to your own directory:
 
    ```
 
@@ -64,19 +57,19 @@ In this topic, you'll follow a series of hands-on exercises that demonstrate how
  	```
 	
 	
-6. Clone Docker repository from github:
+3. Clone Docker repository from github:
 
    ```
 	git clone https://github.com/iportilla/5350-Docker.git
    ```
 	
-8. Change directory to the Docker directory:
+4. Change directory to the Docker directory:
 
    ```
-	cd 5720-Docker/
+	cd 5350-Docker/
    ```
    
-10. Test your `docker` installation by running the following command:
+5. Test your `docker` installation by running the following command:
 
 	```
 	docker run hello-world
@@ -93,7 +86,7 @@ In this topic, you'll follow a series of hands-on exercises that demonstrate how
 	
 ### Hello World
 
-7. Next, we are going to run a `Busybox` container on our system and get a taste of the `docker run` command. To get started, let's run the following in our terminal:.
+6. Next, we are going to run a `Busybox` container on our system and get a taste of the `docker run` command. To get started, let's run the following in our terminal:.
 
 	```
 	docker pull busybox
@@ -121,14 +114,14 @@ In this topic, you'll follow a series of hands-on exercises that demonstrate how
  	...
 	```
 
-9. Great! Let's now run a Docker container based on this image. Run the following command:
+7. Great! Let's now run a Docker container based on this image. Run the following command:
 
 	```
  	docker run busybox echo "Hello World from busybox"
  
  	```
 
-9. Let's run a terminal in the busybox container with:
+8. Let's run a terminal in the busybox container with:
 
 	```
  	docker run -it busybox /bin/sh
