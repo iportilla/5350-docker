@@ -19,7 +19,7 @@
 APP_NAME     ?= app-5350
 APP_IMAGE    ?= 5350:latest
 DOCKERFILE   ?= Dockerfile
-HOST_PORT    ?= 80
+HOST_PORT    ?= 81
 CONT_PORT    ?= 9080
 
 # Optional environment file (uncomment to use)
