@@ -1,13 +1,12 @@
-# Local App Development with Apple `container` + Makefile (Student Guide)
+# Local App Development with Docker + Makefile (Student Guide)
 
-Welcome!   
+Welcome! 👋  
 This repo shows how to **build, run, stop, and restart** a local application using:
 
-- **Apple’s `container` CLI** (macOS)
+- **Docker** (Docker Desktop, Colima, or Linux Docker Engine)
 - A **Makefile** to automate common tasks
-- An **ARM64 Dockerfile** (for Apple Silicon Macs)
 
-You do **not** need Docker Desktop for this setup.
+This guide is written for **junior app developers**.
 
 ---
 
@@ -16,9 +15,9 @@ You do **not** need Docker Desktop for this setup.
 ```mermaid
 flowchart LR
   A[Edit code] --> B[make build]
-  B --> C[Image 5350:latest]
+  B --> C[Docker image 5350:latest]
   C --> D[make run]
-  D --> E[Container app-5350]
+  D --> E[Docker container app-5350]
   E --> F[Browser localhost]
   F --> A
 ```
@@ -27,87 +26,83 @@ flowchart LR
 
 ## Prerequisites
 
-- macOS (Apple Silicon: M1 / M2 / M3 recommended)
-- Apple `container` CLI installed
-- Basic terminal usage
+- Docker installed and running
+  - macOS: Docker Desktop or Colima
+  - Linux: Docker Engine
+  - Windows: Docker Desktop (WSL2)
+- Terminal access
 
-Verify:
+Verify Docker works:
 ```bash
-container --version
+docker --version
+docker info
 ```
 
 ---
 
-## Key Concepts (Plain English)
+## Key concepts (plain English)
 
 ### Image
 An **image** is a packaged version of your app (code + runtime).
-- Built from `Dockerfile.arm64`
-- Named: `5350:latest`
+- Built from a Dockerfile
+- In this repo, the default image name is: `5350:latest`
 
 ### Container
 A **container** is a running instance of an image.
-- Named: `app-5350`
-- Runs your app and holds resources like ports
+- In this repo, we run it as: `app-5350`
 
 ### Ports
-- **Container port**: where the app listens *inside* the container (e.g., `9080`)
-- **Host port**: where you access it on your Mac (e.g., `80`)
+- **Container port**: where the app listens *inside* the container (example: `9080`)
+- **Host port**: where you access it on your machine (example: `80`)
 
 ```mermaid
 flowchart LR
-  B[Browser] -->|http://localhost:80| H[Host macOS]
-  H -->|port map 80:9080| C[Container app-5350]
+  B[Browser] -->|http://localhost:80| H[Host machine]
+  H -->|port map 80:9080| C[Docker container app-5350]
   C -->|listens on 9080| A[App server]
 ```
 
 ---
 
-## Files in this project
+## Files you’ll use
 
 | File | Purpose |
 |---|---|
-| `Dockerfile.arm64` | Defines how the app image is built |
+| `Dockerfile` | Defines how the app image is built |
 | `Makefile` | Automates build/run/stop tasks |
-| `README.md` | You’re reading it |
+| `README.md` | This guide |
 
 ---
 
-## Daily workflow (the 3 commands)
+## Daily workflow (recommended)
 
 ```mermaid
 sequenceDiagram
   participant Dev as You (Developer)
   participant Make as Makefile
-  participant C as Apple container
+  participant Docker as Docker Engine
   participant Img as Image (5350:latest)
   participant Run as Container (app-5350)
 
   Dev->>Make: make restart
-  Make->>C: container build -t 5350:latest -f Dockerfile.arm64 .
-  C-->>Img: Image updated
-  Make->>C: container stop / rm (old app containers)
-  Make->>C: container rm app-5350 (if exists)
-  Make->>C: container run --name app-5350 -p 80:9080 5350:latest
-  C-->>Run: Running
+  Make->>Docker: docker build -t 5350:latest -f Dockerfile .
+  Docker-->>Img: Image updated
+  Make->>Docker: docker stop/rm old containers
+  Make->>Docker: docker run --name app-5350 -p 80:9080 5350:latest
+  Docker-->>Run: Running
   Dev->>Run: Open http://localhost
 ```
 
 ---
 
-## Common commands
+## The commands you’ll use most
 
-### 1) See what’s running
-```bash
-make list
-```
-
-### 2) Build the app image
+### 1) Build the image
 ```bash
 make build
 ```
 
-### 3) Run the app
+### 2) Run the app
 ```bash
 make run
 ```
@@ -115,39 +110,27 @@ make run
 Open:
 - `http://localhost`
 
-### 4) Stop and remove the app container (free ports)
+### 3) Follow logs
 ```bash
-make clean
+make logs
 ```
 
-### 5) Full reset (recommended)
+### 4) Full reset (best default)
 ```bash
 make restart
 ```
 
----
-
-## Why we use a Makefile
-
-Without a Makefile, you must remember multiple commands and the correct order.
-With a Makefile, you get one consistent workflow:
-
-```mermaid
-flowchart TB
-  X[Many manual steps] --> Y[Easy to forget order]
-  Y --> Z[Ports stuck / name conflicts]
-
-  A[Makefile] --> B[One command: make restart]
-  B --> C[Repeatable + consistent]
-  C --> D[Fewer mistakes]
+### 5) Stop and remove containers (free ports)
+```bash
+make clean
 ```
 
 ---
 
 ## Common errors & fixes
 
-### “Address already in use”
-**Meaning:** Something is still using the host port (often your previous container).
+### “Ports are already allocated” / “Address already in use”
+**Meaning:** Something else is using the host port (often another container or a local service).
 
 Fix:
 ```bash
@@ -155,41 +138,44 @@ make clean
 make run
 ```
 
-### “container with id app-5350 already exists”
-**Meaning:** Apple containers won’t reuse the same name unless the old container is removed.
+Or use a different host port:
+```bash
+make run HOST_PORT=8080
+```
 
-Fix: this repo’s `make run` already removes it first.
+### “Cannot connect to the Docker daemon”
+**Meaning:** Docker isn’t running.
 
----
-
-## Troubleshooting checklist
-
-1. **List running containers**
-   ```bash
-   make list
-   ```
-2. **Check who is listening on port 80**
-   ```bash
-   make portcheck
-   ```
-3. **Try a full reset**
-   ```bash
-   make restart
-   ```
+Fix:
+- Start Docker Desktop / Colima
+- Then retry `docker info`
 
 ---
 
-## What to try next
+## Tips for juniors
 
-1. Edit some code
-2. Run:
-   ```bash
-   make restart
-   ```
-3. Refresh your browser
-4. Repeat 
+- Use `make restart` when you’re unsure. It rebuilds and runs cleanly.
+- Use `make logs` when the app “runs” but the page doesn’t load.
+- If you need to debug inside the container:
+  ```bash
+  make shell
+  ```
 
 ---
 
-Happy coding!  
-You’re practicing a real-world dev workflow used on teams.
+## Optional: change ports / Dockerfile
+
+Run on a different port:
+```bash
+make restart HOST_PORT=8080
+```
+
+Build with a different Dockerfile:
+```bash
+make build DOCKERFILE=Dockerfile.dev
+```
+
+---
+
+Happy coding! 🚀  
+This is the same basic workflow you’ll use on many engineering teams.

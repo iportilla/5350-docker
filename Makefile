@@ -1,103 +1,90 @@
 # =========================
-# Apple "container" Makefile
+# Docker Makefile
 # =========================
-# Usage:
-#   make list
-#   make build
-#   make clean
-#   make run
-#   make restart
+# This Makefile provides a simple, repeatable workflow for building and running
+# this app with Docker (Docker Desktop, Colima, or Linux Docker Engine).
 #
-# Notes:
-# - Apple `container run --name X` will FAIL if a container named X already exists
-#   (even if stopped). So `run` proactively removes the named container first.
-# - `buildkit` is expected to be running; we never stop/remove it.
+# Common use:
+#   make restart
+#   make logs
+#   make shell
+#
+# NOTE:
+# - Docker *can* reuse a container name if you remove the old container first.
+# - This Makefile removes an existing container named APP_NAME before running.
 
-# =========================
+# -------------------------
 # App configuration
-# =========================
+# -------------------------
 APP_NAME     ?= app-5350
 APP_IMAGE    ?= 5350:latest
-APP_REPO     ?= 5350
-DOCKERFILE   ?= Dockerfile.arm64
-
+DOCKERFILE   ?= Dockerfile
 HOST_PORT    ?= 80
 CONT_PORT    ?= 9080
 
-# =========================
-# Internal helpers
-# =========================
-# Match containers by NAME or IMAGE repo prefix (e.g., 5350 or 5350:latest).
-# We parse the first two columns from `container list`:
-#   ID/NAME   IMAGE
-APP_IDS = $(shell \
-	container list 2>/dev/null | \
-	awk 'NR>1 {print $$1, $$2}' | \
-	awk '$$1=="$(APP_NAME)" || $$2 ~ "^$(APP_REPO)(:|$$)" {print $$1}' \
-)
+# Optional environment file (uncomment to use)
+# ENV_FILE    ?= .env
 
-# =========================
+# -------------------------
+# Helpers
+# -------------------------
+# Find containers that match APP_NAME or were created from APP_IMAGE
+APP_IDS = $(shell docker ps -a --format '{{.ID}} {{.Names}} {{.Image}}' | 	awk '$$2=="$(APP_NAME)" || $$3=="$(APP_IMAGE)" {print $$1}')
+
+# -------------------------
 # Targets
-# =========================
-.PHONY: list status build stop rm clean run restart portcheck
+# -------------------------
+.PHONY: help list status build stop rm clean run restart logs shell portcheck
+
+help:
+	@echo "Targets:"
+	@echo "  make list       - list containers"
+	@echo "  make build      - build image"
+	@echo "  make run        - run container (detached)"
+	@echo "  make logs       - follow logs"
+	@echo "  make shell      - open a shell in the running container"
+	@echo "  make clean      - stop + remove matching containers"
+	@echo "  make restart    - build + clean + run"
+	@echo "  make portcheck  - show what is listening on HOST_PORT"
 
 list:
-	@container list
+	@docker ps -a
 
 status:
-	@echo "App name:      $(APP_NAME)"
-	@echo "App image:     $(APP_IMAGE)"
-	@echo "Dockerfile:    $(DOCKERFILE)"
-	@echo "Port mapping:  $(HOST_PORT):$(CONT_PORT)"
+	@echo "APP_NAME=$(APP_NAME)"
+	@echo "APP_IMAGE=$(APP_IMAGE)"
+	@echo "DOCKERFILE=$(DOCKERFILE)"
+	@echo "PORTS=$(HOST_PORT):$(CONT_PORT)"
 	@echo "Matched container IDs:"
 	@echo "$(APP_IDS)"
 
-# ---- Build image (ARM64)
 build:
 	@echo "Building $(APP_IMAGE) using $(DOCKERFILE)"
-	@container build -t $(APP_IMAGE) -f $(DOCKERFILE) .
-	@echo "Build complete"
+	@docker build -t $(APP_IMAGE) -f $(DOCKERFILE) .
 
-# ---- Stop running app container(s) (by name or image match)
 stop:
-	@if [ -z "$(APP_IDS)" ]; then \
-		echo "No running app containers found"; \
-	else \
-		for id in $(APP_IDS); do \
-			echo "Stopping $$id"; \
-			container stop $$id || true; \
-		done; \
-	fi
+	@if [ -z "$(APP_IDS)" ]; then 		echo "No matching containers to stop"; 	else 		for id in $(APP_IDS); do 			echo "Stopping $$id"; 			docker stop $$id >/dev/null || true; 		done; 	fi
 
-# ---- Remove app container(s) found by name or image match
 rm:
-	@if [ -z "$(APP_IDS)" ]; then \
-		echo "No app containers to remove"; \
-	else \
-		for id in $(APP_IDS); do \
-			echo "Removing $$id"; \
-			container rm $$id || true; \
-		done; \
-	fi
+	@if [ -z "$(APP_IDS)" ]; then 		echo "No matching containers to remove"; 	else 		for id in $(APP_IDS); do 			echo "Removing $$id"; 			docker rm $$id >/dev/null || true; 		done; 	fi
 
-# ---- Stop + remove
 clean: stop rm
 
-# ---- Run app (idempotent: remove existing named container first)
 run:
 	@echo "Ensuring no existing container named $(APP_NAME)..."
-	@container rm $(APP_NAME) 2>/dev/null || true
+	@docker rm -f $(APP_NAME) >/dev/null 2>&1 || true
 	@echo "Running $(APP_NAME) on $(HOST_PORT) -> $(CONT_PORT)"
-	@container run -d \
-		--name $(APP_NAME) \
-		-p $(HOST_PORT):$(CONT_PORT) \
-		$(APP_IMAGE)
-	@container list
+	@docker run -d 		--name $(APP_NAME) 		-p $(HOST_PORT):$(CONT_PORT) 		$(APP_IMAGE)
+	@docker ps --filter "name=$(APP_NAME)"
 
-# ---- Full cycle
 restart: build clean run
 
-# ---- Debug port usage (host-side)
+logs:
+	@docker logs -f $(APP_NAME)
+
+shell:
+	@docker exec -it $(APP_NAME) sh
+
 portcheck:
 	@echo "Checking who is listening on host port $(HOST_PORT)..."
 	@sudo lsof -nP -iTCP:$(HOST_PORT) -sTCP:LISTEN || true
