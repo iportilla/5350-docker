@@ -28,6 +28,12 @@ flowchart LR
 
 ## Prerequisites
 
+```
+Xcode 26.0 cannot be installed on macOS 15.
+You must upgrade your version of macOS.
+container: This software does not run on macOS versions older than Tahoe.
+```
+
 - macOS (Apple Silicon: M1 / M2 / M3 recommended)
 - Apple `container` CLI installed
 - Basic terminal usage
